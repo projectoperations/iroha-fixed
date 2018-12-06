@@ -74,6 +74,7 @@ message ErrorResponse {
   }
   Reason reason = 1;
   string message = 2;
+  uint32 error_code = 3;
 }
 
 message SignatoriesResponse {
@@ -110,6 +111,6 @@ message BlockErrorResponse {
 message BlockQueryResponse {
   oneof response {
     BlockResponse block_response = 1;
-    BlockErrorResponse error_response = 2;
+    BlockErrorResponse block_error_response = 2;
   }
 }

@@ -18,14 +18,17 @@
 #ifndef IROHA_SYNCHRONIZER_HPP
 #define IROHA_SYNCHRONIZER_HPP
 
-#include <rxcpp/rx-observable.hpp>
+#include <rxcpp/rx.hpp>
 
-#include "interfaces/iroha_internal/block_variant.hpp"
 #include "network/peer_communication_service.hpp"
+#include "synchronizer/synchronizer_common.hpp"
 
 namespace iroha {
-  namespace synchronizer {
+  namespace network {
+    struct Commit;
+  }
 
+  namespace synchronizer {
     /**
      * Synchronizer is interface for fetching missed blocks
      */
@@ -34,17 +37,17 @@ namespace iroha {
       /**
        * Processing last committed block
        */
-      virtual void process_commit(
-          const shared_model::interface::BlockVariant &commit_message) = 0;
+      virtual void process_commit(network::Commit commit_message) = 0;
 
       /**
-       * Emit committed blocks
-       * Note: from one block received on consensus
+       * After synchronization this observable emits zero or more blocks plus
+       * outcome of synchronization
        */
-      virtual rxcpp::observable<Commit> on_commit_chain() = 0;
+      virtual rxcpp::observable<SynchronizationEvent> on_commit_chain() = 0;
 
       virtual ~Synchronizer() = default;
     };
+
   }  // namespace synchronizer
 }  // namespace iroha
 #endif  // IROHA_SYNCHRONIZER_HPP

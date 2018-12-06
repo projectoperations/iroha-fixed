@@ -18,16 +18,20 @@
 #ifndef IROHA_BLOCK_CREATOR_HPP
 #define IROHA_BLOCK_CREATOR_HPP
 
-#include <rxcpp/rx-observable.hpp>
+#include <rxcpp/rx.hpp>
 
 namespace shared_model {
   namespace interface {
-    class BlockVariant;
+    class Block;
     class Proposal;
   }  // namespace interface
 }  // namespace shared_model
 
 namespace iroha {
+  namespace validation {
+    struct VerifiedProposalAndErrors;
+  }
+
   namespace simulator {
 
     /**
@@ -40,13 +44,14 @@ namespace iroha {
        * @param proposal - object for validation
        */
       virtual void process_verified_proposal(
-          const shared_model::interface::Proposal &) = 0;
+          const std::shared_ptr<validation::VerifiedProposalAndErrors>
+              &verified_proposal_and_errors) = 0;
 
       /**
        * Emit blocks made from proposals
        * @return
        */
-      virtual rxcpp::observable<shared_model::interface::BlockVariant>
+      virtual rxcpp::observable<std::shared_ptr<shared_model::interface::Block>>
       on_block() = 0;
 
       virtual ~BlockCreator() = default;

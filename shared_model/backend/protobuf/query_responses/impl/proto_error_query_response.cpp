@@ -46,5 +46,14 @@ namespace shared_model {
       return *ivariant_;
     }
 
+    const ErrorQueryResponse::ErrorMessageType &
+    ErrorQueryResponse::errorMessage() const {
+      return proto_->error_response().message();
+    }
+
+    ErrorQueryResponse::ErrorCodeType ErrorQueryResponse::errorCode() const {
+      return proto_->error_response().error_code();
+    }
+
   }  // namespace proto
 }  // namespace shared_model

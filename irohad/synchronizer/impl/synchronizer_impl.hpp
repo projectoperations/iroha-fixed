@@ -1,19 +1,8 @@
 /**
- * Copyright Soramitsu Co., Ltd. 2017 All Rights Reserved.
- * http://soramitsu.co.jp
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *        http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
+ * Copyright Soramitsu Co., Ltd. All Rights Reserved.
+ * SPDX-License-Identifier: Apache-2.0
  */
+
 #ifndef IROHA_SYNCHRONIZER_IMPL_HPP
 #define IROHA_SYNCHRONIZER_IMPL_HPP
 
@@ -25,33 +14,55 @@
 #include "validation/chain_validator.hpp"
 
 namespace iroha {
+
+  namespace ametsuchi {
+    class BlockQueryFactory;
+  }
+
   namespace synchronizer {
+
     class SynchronizerImpl : public Synchronizer {
      public:
       SynchronizerImpl(
           std::shared_ptr<network::ConsensusGate> consensus_gate,
           std::shared_ptr<validation::ChainValidator> validator,
-          std::shared_ptr<ametsuchi::MutableFactory> mutableFactory,
-          std::shared_ptr<network::BlockLoader> blockLoader);
+          std::shared_ptr<ametsuchi::MutableFactory> mutable_factory,
+          std::shared_ptr<ametsuchi::BlockQueryFactory> block_query_factory,
+          std::shared_ptr<network::BlockLoader> block_loader);
 
-      ~SynchronizerImpl();
+      ~SynchronizerImpl() override;
 
-      void process_commit(
-          const shared_model::interface::BlockVariant &commit_message) override;
+      void process_commit(network::Commit commit_message) override;
 
-      rxcpp::observable<Commit> on_commit_chain() override;
+      rxcpp::observable<SynchronizationEvent> on_commit_chain() override;
 
      private:
+      /**
+       * Iterate through the peers which signed the commit_message, load and
+       * apply the missing blocks
+       * @param commit_message - the commit that triggered synchronization
+       * @param storage - mutable storage to apply downloaded commits from other
+       * peers
+       * @param height - the top block height of a peer that needs to be
+       * synchronized
+       */
+      SynchronizationEvent downloadMissingBlocks(
+          std::shared_ptr<shared_model::interface::Block> commit_message,
+          std::unique_ptr<ametsuchi::MutableStorage> storage,
+          const shared_model::interface::types::HeightType height);
+
       std::shared_ptr<validation::ChainValidator> validator_;
-      std::shared_ptr<ametsuchi::MutableFactory> mutableFactory_;
-      std::shared_ptr<network::BlockLoader> blockLoader_;
+      std::shared_ptr<ametsuchi::MutableFactory> mutable_factory_;
+      std::shared_ptr<ametsuchi::BlockQueryFactory> block_query_factory_;
+      std::shared_ptr<network::BlockLoader> block_loader_;
 
       // internal
-      rxcpp::subjects::subject<Commit> notifier_;
+      rxcpp::subjects::subject<SynchronizationEvent> notifier_;
       rxcpp::composite_subscription subscription_;
 
       logger::Logger log_;
     };
+
   }  // namespace synchronizer
 }  // namespace iroha
 

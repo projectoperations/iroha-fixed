@@ -15,6 +15,7 @@
  * limitations under the License.
  */
 
+#include <boost/assert.hpp>
 #include "model/converters/pb_block_factory.hpp"
 #include "model/converters/pb_common.hpp"
 #include "model/converters/pb_transaction_factory.hpp"
@@ -35,13 +36,18 @@ namespace iroha {
 
         for (const auto &sig_obj : block.sigs) {
           auto sig = pb_block.add_signatures();
-          sig->set_pubkey(sig_obj.pubkey.to_string());
+          sig->set_public_key(sig_obj.pubkey.to_string());
           sig->set_signature(sig_obj.signature.to_string());
         }
 
         for (const auto &tx : block.transactions) {
           auto pb_tx = pl->add_transactions();
           pb_tx->CopyFrom(PbTransactionFactory::serialize(tx));
+        }
+
+        for (const auto &hash : block.rejected_transactions_hashes) {
+          auto pb_hash = pl->add_rejected_transactions_hashes();
+          *pb_hash = hash.to_string();
         }
 
         return pb_block;
@@ -66,13 +72,23 @@ namespace iroha {
         for (const auto &pb_sig : pb_block.signatures()) {
           model::Signature sig;
           sig.signature = sig_t::from_string(pb_sig.signature());
-          sig.pubkey = pubkey_t::from_string(pb_sig.pubkey());
+          sig.pubkey = pubkey_t::from_string(pb_sig.public_key());
           block.sigs.push_back(std::move(sig));
         }
 
         for (const auto &pb_tx : pl.transactions()) {
           block.transactions.push_back(
               *PbTransactionFactory::deserialize(pb_tx));
+        }
+
+        for (const auto &pb_hash : pl.rejected_transactions_hashes()) {
+          BOOST_VERIFY_MSG(
+              pb_hash.size() == model::Block::HashType::size(),
+              ("Wrong rejected transaction hash: " + pb_hash).c_str());
+          block.rejected_transactions_hashes.emplace_back();
+          std::copy(pb_hash.begin(),
+                    pb_hash.end(),
+                    block.rejected_transactions_hashes.back().begin());
         }
 
         block.hash = iroha::hash(pb_block);

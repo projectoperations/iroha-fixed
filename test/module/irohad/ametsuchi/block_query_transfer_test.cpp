@@ -16,8 +16,11 @@
  */
 
 #include <boost/optional.hpp>
+
 #include "ametsuchi/impl/postgres_block_index.hpp"
 #include "ametsuchi/impl/postgres_block_query.hpp"
+#include "backend/protobuf/proto_block_json_converter.hpp"
+#include "common/byteutils.hpp"
 #include "converters/protobuf/json_proto_converter.hpp"
 #include "framework/test_subscriber.hpp"
 #include "module/irohad/ametsuchi/ametsuchi_fixture.hpp"
@@ -40,7 +43,9 @@ namespace iroha {
         sql = std::make_unique<soci::session>(soci::postgresql, pgopt_);
 
         index = std::make_shared<PostgresBlockIndex>(*sql);
-        blocks = std::make_shared<PostgresBlockQuery>(*sql, *file);
+        auto converter =
+            std::make_shared<shared_model::proto::ProtoBlockJsonConverter>();
+        blocks = std::make_shared<PostgresBlockQuery>(*sql, *file, converter);
 
         *sql << init_;
       }
@@ -50,6 +55,11 @@ namespace iroha {
                   iroha::stringToBytes(
                       shared_model::converters::protobuf::modelToJson(block)));
         index->index(block);
+      }
+
+      void TearDown() override {
+        sql->close();
+        AmetsuchiTest::TearDown();
       }
 
       std::unique_ptr<soci::session> sql;
@@ -79,13 +89,14 @@ namespace iroha {
                                                     std::string creator2,
                                                     std::string asset,
                                                     std::string tx_creator) {
+      std::vector<shared_model::proto::Transaction> txs;
+      txs.push_back(
+          TestTransactionBuilder()
+              .creatorAccountId(tx_creator)
+              .transferAsset(creator1, creator2, asset, "Transfer asset", "0.0")
+              .build());
       return TestBlockBuilder()
-          .transactions(std::vector<shared_model::proto::Transaction>(
-              {TestTransactionBuilder()
-                   .creatorAccountId(tx_creator)
-                   .transferAsset(
-                       creator1, creator2, asset, "Transfer asset", "0.0")
-                   .build()}))
+          .transactions(txs)
           .height(1)
           .prevHash(fake_hash)
           .build();
@@ -105,12 +116,13 @@ namespace iroha {
         std::string asset,
         int height = 1,
         shared_model::crypto::Hash hash = fake_hash) {
+      std::vector<shared_model::proto::Transaction> txs;
+      txs.push_back(
+          TestTransactionBuilder()
+              .transferAsset(creator1, creator2, asset, "Transfer asset", "0.0")
+              .build());
       return TestBlockBuilder()
-          .transactions(std::vector<shared_model::proto::Transaction>(
-              {TestTransactionBuilder()
-                   .transferAsset(
-                       creator1, creator2, asset, "Transfer asset", "0.0")
-                   .build()}))
+          .transactions(txs)
           .height(height)
           .prevHash(hash)
           .build();

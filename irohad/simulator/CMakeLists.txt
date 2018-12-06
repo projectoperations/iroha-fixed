@@ -3,7 +3,8 @@ add_library(simulator
     )
 
 target_link_libraries(simulator
-    shared_model_proto_backend
+    shared_model_interfaces
     rxcpp
     logger
+    common
     )
